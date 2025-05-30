@@ -14,9 +14,9 @@ use nb::block;
 
 use cortex_m_rt::entry;
 use rtt_target::{rprintln, rtt_init_print};
-use stm32f1xx_hal::{pac, prelude::*, serial::Config};
+use stm32f1xx_hal::{pac, prelude::*, serial::Config, timer::Timer};
 
-use usbd_serial::SerialPort;
+use usbd_serial::{embedded_io::Write, SerialPort};
 
 #[entry]
 fn main() -> ! {
@@ -60,7 +60,7 @@ fn main() -> ! {
     // the registers are used to enable and configure the device.
     let mut serial = p
         .USART1
-        .serial((tx, rx), Config::default().baudrate(9600.bps()), &clocks);
+        .serial((tx, rx), Config::default().baudrate(57600.bps()), &clocks);
 
     /*// Loopback test. Write `X` and wait until the write is successful.
     let sent = b'X';
@@ -89,13 +89,42 @@ fn main() -> ! {
     let mut led = gpioc.pc13.into_push_pull_output(&mut gpioc.crh);
 
     led.set_low();
-    loop {
-        //rprintln!(=> 1, "loop");
-        let received = block!(serial.rx.read()).unwrap();
+    let cp = cortex_m::Peripherals::take().unwrap();
+    let mut timer = Timer::syst(cp.SYST, &clocks).counter_hz();
+    timer.start(1.Hz()).unwrap();
 
-        rprintln!("received {} ", received);
-        //serial.read().unwrap()
-        //serial.rx.
-        
+    loop {
+        loop {
+            let received = block!(serial.rx.read()).unwrap();
+            rprintln!("received: {}", received);
+            if received & 0x80 != 0 {
+                let mut packed_data = [0u8; 5];
+                packed_data[0] = received;
+                for i in 1..5 {
+                    let received = block!(serial.rx.read()).unwrap();
+                    packed_data[i] = received;
+                }
+
+                let data = unpack_keydata(packed_data);
+                rprintln!("data: {}", data);
+                break;
+            }
+        }
+
+        block!(timer.wait()).unwrap();
+
+        led.toggle();
     }
+}
+
+fn unpack_keydata(data: [u8; 5]) -> u32 {
+    let b0 = (data[0] & 0x7f) as u32;
+    let b1 = (data[1] & 0x7f) as u32;
+    let b2 = (data[2] & 0x7f) as u32;
+    let b3 = (data[3] & 0x7f) as u32;
+    let b4 = (data[4] & 0x7f) as u32;
+
+    let le = b0 | (b1 << 7) | (b2 << 14) | (b3 << 21) | (b4 << 28);
+
+    u32::from_le(le)
 }
