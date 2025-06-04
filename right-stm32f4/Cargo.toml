@@ -1,5 +1,5 @@
 [package]
-name = "left-stm32f1"
+name = "right-stm32f1"
 version = "0.1.0"
 edition = "2021"
 
@@ -15,18 +15,13 @@ embedded-hal = "1.0.0"
 nb = "1"
 cortex-m = "0.7.6"
 cortex-m-rt = "0.7.1"
-# Panic behaviour, see https://crates.io/keywords/panic-impl for alternatives
 panic-halt = "1.0.0"
-panic-rtt-target = {version = "0.1.2", features=["cortex-m"]}
-rtt-target = {version = "0.3.1", features=["cortex-m"]}
+#panic-rtt-target = {version = "0.1.2", features=["cortex-m"]}
+#rtt-target = {version = "0.6.1"}
 cortex-m-semihosting = "0.5.0"
-usb-device = "0.3"
-usbd-human-interface-device = "0.5.1"
-stm32-usbd = "0.7.0"
-usbd-serial = "0.2.2"
-#panic-semihosting = "0.6.0"
 stm32f4xx-hal = {version = "0.22.0", features = ["stm32f401"]}
+shared-src = {path = "../shared-src"}
 
-# [dependencies.stm32f1xx-hal]
-# version = "0.10.0"
-# features = ["rt", "stm32f103", "medium"]
+[[bin]]
+name = "right-stm32f1"
+test = false

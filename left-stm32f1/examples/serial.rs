@@ -32,7 +32,12 @@ fn main() -> ! {
 
     // Freeze the configuration of all the clocks in the system and store the frozen frequencies in
     // `clocks`
-    let clocks = rcc.cfgr.freeze(&mut flash.acr);
+    let clocks = rcc
+        .cfgr
+        .use_hse(8.MHz())
+        .sysclk(48.MHz())
+        /*.pclk1(24.MHz())*/
+        .freeze(&mut flash.acr);
 
     // Prepare the alternate function I/O registers
     //let mut afio = p.AFIO.constrain();
@@ -60,7 +65,7 @@ fn main() -> ! {
     // the registers are used to enable and configure the device.
     let mut serial = p
         .USART1
-        .serial((tx, rx), Config::default().baudrate(57600.bps()), &clocks);
+        .serial((tx, rx), Config::default().baudrate(9600.bps()), &clocks);
 
     /*// Loopback test. Write `X` and wait until the write is successful.
     let sent = b'X';
@@ -89,13 +94,25 @@ fn main() -> ! {
     let mut led = gpioc.pc13.into_push_pull_output(&mut gpioc.crh);
 
     led.set_low();
+    rprintln!("A");
     let cp = cortex_m::Peripherals::take().unwrap();
-    let mut timer = Timer::syst(cp.SYST, &clocks).counter_hz();
-    timer.start(1.Hz()).unwrap();
+    //let mut timer = Timer::
+    //timer.start(1.Hz()).unwrap();
+    rprintln!("A");
+
 
     loop {
-        loop {
-            let received = block!(serial.rx.read()).unwrap();
+        serial.tx.write_all(&[10u8]);
+        /*loop {
+
+            //rprintln!("Wait");
+            let received = match serial.rx.read() {
+                Ok(r) => r,
+                Err(e) => {
+                    rprintln!("{:?}", e);
+                    continue;
+                }
+            };
             rprintln!("received: {}", received);
             if received & 0x80 != 0 {
                 let mut packed_data = [0u8; 5];
@@ -109,9 +126,9 @@ fn main() -> ! {
                 rprintln!("data: {}", data);
                 break;
             }
-        }
+        }*/
 
-        block!(timer.wait()).unwrap();
+        //block!(timer.wait()).unwrap();
 
         led.toggle();
     }

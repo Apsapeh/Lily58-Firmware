@@ -1,0 +1,10 @@
+[package]
+name = "shared-src"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+
+[dependencies.num]
+version = "0.4.3"
+default-features = false

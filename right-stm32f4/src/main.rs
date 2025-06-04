@@ -1,68 +1,78 @@
 #![no_main]
 #![no_std]
-
-use core::result;
-
 use panic_halt as _;
 
-use nb::block;
-
 use cortex_m_rt::entry;
-use stm32f4xx_hal::{self as hal, serial::Config};
-
+use nb::block;
+use stm32f4xx_hal::{self as hal};
 use crate::hal::{pac, prelude::*};
+
+use shared_src::PrimitiveBitset;
 
 
 #[entry]
 fn main() -> ! {
     let dp = pac::Peripherals::take().unwrap();
 
-    let gpioa = dp.GPIOA.split();
-
     let rcc = dp.RCC.constrain();
-
     let clocks = rcc.cfgr.use_hse(25.MHz()).freeze();
 
-    let mut delay = dp.TIM1.delay_ms(&clocks);
+    let gpioa = dp.GPIOA.split();
+    let gpiob = dp.GPIOB.split();
 
-    // define RX/TX pins
-    let tx_pin = gpioa.pa9;
-    let rx_pin = gpioa.pa10;
+    let tx_pin = gpioa.pa2;
+    let mut tx = dp.USART2.tx(tx_pin, 57600.bps(), &clocks).unwrap();
 
-    // configure serial
-    // let mut tx = Serial::tx(dp.USART1, tx_pin, 9600.bps(), &clocks).unwrap();
-    // or
-    let mut serial = dp.USART1.serial::<u8>((tx_pin, rx_pin), Config::default().baudrate(57600.bps()), &clocks).unwrap();
-    //let mut tx = dp.USART1.tx(tx_pin, 9600.bps(), &clocks).unwrap();
-    //let mut rx = dp.USART1.rx::<u8>(rx_pin, 9600.bps(), &clocks).unwrap();
+    // Collumns
+    let mut power_pins = [
+        gpiob.pb9.into_push_pull_output().erase(),
+        gpiob.pb8.into_push_pull_output().erase(),
+        gpiob.pb7.into_push_pull_output().erase(),
+        gpiob.pb6.into_push_pull_output().erase(),
+        gpiob.pb5.into_push_pull_output().erase(),
+    ];
 
-    let mut value: u8 = 0;
+    // Rows
+    let signal_pins = [
+        gpiob.pb10.into_pull_down_input().erase(),
+        gpioa.pa5.into_pull_down_input().erase(),
+        gpioa.pa6.into_pull_down_input().erase(),
+        gpioa.pa7.into_pull_down_input().erase(),
+        gpiob.pb0.into_pull_down_input().erase(),
+        gpiob.pb1.into_pull_down_input().erase(),
+    ];
 
-    let gpioc = dp.GPIOC.split();
-    let mut led = gpioc.pc13.into_push_pull_output();
-    led.set_high();
+    let mut matrix = PrimitiveBitset::new(0u32);
 
-    let mut key_data: u32 = 0;
-
-    let (mut tx, mut rx) = serial.split();
-
+    let mut delay = dp.TIM1.delay_us(&clocks);
     loop {
-        let packed_keydata =  pack_keydata(key_data);
-        for i in 0..5 {
-            block!(tx.write(packed_keydata[i])).unwrap();
+        delay.delay_us(50);
+        // Read keyboard matrix
+        for (r, pw) in power_pins.iter_mut().enumerate() {
+            pw.set_high();
+            delay.delay_us(10);
+            for (c, sg) in signal_pins.iter().enumerate() {
+                matrix.set(r * signal_pins.len() + c, sg.is_high());
+            }
+            pw.set_low();
         }
-        led.set_low();
-        key_data =key_data.wrapping_add(1);
+        
+
+        // Send data to the main half (left stm32f1)
+        let packed_keydata = pack_keydata(matrix.get_raw());
+        for i in 0..5 {
+            let _ = block!(tx.write(packed_keydata[i]));
+        }
     }
 }
 
-/*
-Byte format:
-    0 bit:
-        1: message first byte
-        0: message continuation byte
-    1..7 bits: data
-*/
+
+
+/// Byte format:
+///  - [0] bit:
+///     - 1: It's the message first byte
+///     - 0: It's the message continuation byte \[1..5\]
+///  -   [1..7] bits: data
 fn pack_keydata(key_data: u32) -> [u8; 5] {
     let le = key_data.to_le();
     let mut result = [0; 5];
