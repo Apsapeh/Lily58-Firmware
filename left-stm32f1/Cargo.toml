@@ -21,7 +21,7 @@ panic-rtt-target = {version = "0.1.2", features=["cortex-m"]}
 rtt-target = {version = "0.6.1"}
 cortex-m-semihosting = "0.5.0"
 usb-device = "0.3"
-usbd-human-interface-device = {path = "deps/usbd-human-interface-device"}
+usbd-human-interface-device = "0.6.0"
 stm32-usbd = "0.7.0"
 usbd-serial = "0.2.2"
 #panic-semihosting = "0.6.0"
@@ -30,6 +30,14 @@ stm32f1xx-hal = { git = "https://github.com/stm32-rs/stm32f1xx-hal.git", feature
   "medium",
 ] }
 shared-src = {path = "../shared-src"}
+
+[[bin]]
+name = "left-stm32f1"
+path = "src/main.rs"
+test = false
+doctest = false
+bench = false
+
 
 
 # [dependencies.stm32f1xx-hal]

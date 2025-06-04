@@ -592,6 +592,8 @@ dependencies = [
 [[package]]
 name = "usbd-human-interface-device"
 version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "42ec14dbf3faf02aa63c4a6c10465ccd6b29010380a48e5187d63d5233fbbaf6"
 dependencies = [
  "frunk",
  "fugit",

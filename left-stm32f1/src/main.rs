@@ -3,26 +3,28 @@
 
 use panic_halt as _;
 
-use cortex_m_rt::entry;
 use cortex_m::asm::delay;
-use nb::block;
-use rtt_target::{rprintln, rtt_init_print};
-use stm32f1xx_hal::{pac, prelude::*, serial::Config};
+use cortex_m_rt::entry;
 use stm32f1xx_hal::usb::{Peripheral, UsbBus};
+use stm32f1xx_hal::{pac, prelude::*, serial::Config};
 use usb_device::prelude::*;
 
-use usbd_human_interface_device::device::keyboard::{KeyboardLedsReport, NKROBootKeyboardConfig};
-use usbd_human_interface_device::page::Keyboard;
+use usbd_human_interface_device::device::consumer::{
+    ConsumerControl, ConsumerControlConfig, MultipleConsumerReport,
+};
+use usbd_human_interface_device::device::keyboard::{NKROBootKeyboard, NKROBootKeyboardConfig};
+
+use usbd_human_interface_device::page::{Consumer, Keyboard};
 use usbd_human_interface_device::prelude::*;
 
+use fixed_vec::FixedVec;
 use shared_src::PrimitiveBitset;
 
+mod fixed_vec;
 mod layouts_def;
 
 #[entry]
 fn main() -> ! {
-    rtt_init_print!();
-
     // Get access to the device specific peripherals from the peripheral access crate
     let dp = pac::Peripherals::take().unwrap();
 
@@ -45,9 +47,9 @@ fn main() -> ! {
     let mut serial = dp
         .USART3
         .serial((tx, rx), Config::default().baudrate(57600.bps()), &clocks);
-    
+
     /////// Init USB-HID device ///////
-    // This code taken from examples
+    // This code taken from the examples
     // BluePill board has a pull-up resistor on the D+ line.
     // Pull the D+ pin down to send a RESET condition to the USB bus.
     // This forced reset is needed only for development, without it host
@@ -65,24 +67,49 @@ fn main() -> ! {
 
     let mut keyboard = UsbHidClassBuilder::new()
         .add_device(NKROBootKeyboardConfig::default())
+        .add_device(ConsumerControlConfig::default())
         .build(&usb_bus);
 
     let mut usb_dev = UsbDeviceBuilder::new(&usb_bus, UsbVidPid(0x05AC, 0x0202))
         .strings(&[StringDescriptors::default()
-            .manufacturer("TimofeyKirichenko")
-            .product("Potujnaya Keyboard")
-            .serial_number("PotujnayaPeremoga")])
+            .manufacturer("MegaHoholTimofeyKirichenko")
+            .product("VirhPotujnosti")
+            .serial_number("PesPatron")])
         .unwrap()
         .build();
-    
+
     let mut timer = dp.TIM2.counter_hz(&clocks);
     timer.start(1000.Hz()).unwrap();
-    
+
+    //
+    // Collumns
+    let mut power_pins = [
+        gpiob.pb9.into_push_pull_output(&mut gpiob.crh).erase(),
+        gpiob.pb8.into_push_pull_output(&mut gpiob.crh).erase(),
+        gpiob.pb7.into_push_pull_output(&mut gpiob.crl).erase(),
+        gpiob.pb6.into_push_pull_output(&mut gpiob.crl).erase(),
+        gpiob.pb5.into_push_pull_output(&mut gpiob.crl).erase(),
+    ];
+
+    // Rows
+    let signal_pins = [
+        gpioa.pa1.into_pull_down_input(&mut gpioa.crl).erase(),
+        gpioa.pa2.into_pull_down_input(&mut gpioa.crl).erase(),
+        gpioa.pa3.into_pull_down_input(&mut gpioa.crl).erase(),
+        gpioa.pa4.into_pull_down_input(&mut gpioa.crl).erase(),
+        gpioa.pa5.into_pull_down_input(&mut gpioa.crl).erase(),
+        gpioa.pa6.into_pull_down_input(&mut gpioa.crl).erase(),
+    ];
+
     // Async UART buffer
     let mut uart_buffer = [0u8; 5];
-    let mut uart_buffer_len = 0; 
+    let mut uart_buffer_len = 0;
 
-    loop {      
+    let mut left_matrix = [false; 30];
+    let mut key_report: FixedVec<_, 58> = FixedVec::new(Keyboard::NoEventIndicated);
+    let mut media_report: FixedVec<_, 4> = FixedVec::new(Consumer::Unassigned);
+
+    loop {
         // Async reading UART data from slave to buffer
         match (serial.rx.read()) {
             Ok(received) => {
@@ -92,7 +119,8 @@ fn main() -> ! {
                     if uart_buffer_len == 0 {
                         uart_buffer[0] = received;
                         uart_buffer_len = 1;
-                    } else { // Buffer is corrupted
+                    } else {
+                        // Buffer is corrupted
                         uart_buffer_len = 0;
                     }
                 } else {
@@ -104,43 +132,56 @@ fn main() -> ! {
             }
             Err(_) => {}
         }
-        
+
         // If buffer filled
         if uart_buffer_len == 5 {
             uart_buffer_len = 0;
             let data = unpack_keydata(uart_buffer);
             let right_matrix = PrimitiveBitset::new(data);
-            // TODO: Read left matrix
-            
-            let mut report = [Keyboard::NoEventIndicated; 2];
-            if right_matrix.get(0) {
-                report[0] = Keyboard::MediaVolumeUp;
-                report[1] = Keyboard::A;
+
+            // Read left matrix
+            for (r, pw) in power_pins.iter_mut().enumerate() {
+                pw.set_high();
+                delay(10);
+                for (c, sg) in signal_pins.iter().enumerate() {
+                    left_matrix[r * signal_pins.len() + c] = sg.is_high();
+                }
+                pw.set_low();
             }
-            keyboard.device().write_report(report).ok();
+
+            layouts_def::get_report(
+                &left_matrix,
+                right_matrix,
+                &mut key_report,
+                &mut media_report,
+            );
+
+            keyboard
+                .device::<NKROBootKeyboard<'_, _>, _>()
+                .write_report(key_report.data)
+                .ok();
+            keyboard
+                .device::<ConsumerControl<'_, _>, _>()
+                .write_report(&MultipleConsumerReport {
+                    codes: media_report.data,
+                })
+                .ok();
         }
-        
-        /*let mut report = [Keyboard::NoEventIndicated; 1];
-        if right_matrix.get(0) {
-            report[0] = Keyboard::A;
-        }
-        keyboard.device().write_report(report.into_iter()).ok();*/
-        
+
         if timer.wait().is_ok() {
             keyboard.tick().unwrap();
         }
-        
+
         if usb_dev.poll(&mut [&mut keyboard]) {
-            match keyboard.device().read_report() {
+            /*match keyboard.device().read_report() {
                 Ok(l) => {
                     //update_leds(l);
                 }
                 _ => {}
-            }
+            }*/
         }
     }
 }
-
 
 /// Byte format:
 ///  - [0] bit:
