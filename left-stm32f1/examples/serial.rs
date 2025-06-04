@@ -10,13 +10,11 @@
 use panic_halt as _;
 
 
-use nb::block;
-
 use cortex_m_rt::entry;
 use rtt_target::{rprintln, rtt_init_print};
-use stm32f1xx_hal::{pac, prelude::*, serial::Config, timer::Timer};
+use stm32f1xx_hal::{pac, prelude::*, serial::Config};
 
-use usbd_serial::{embedded_io::Write, SerialPort};
+use usbd_serial::embedded_io::Write;
 
 #[entry]
 fn main() -> ! {
@@ -99,7 +97,6 @@ fn main() -> ! {
     //let mut timer = Timer::
     //timer.start(1.Hz()).unwrap();
     rprintln!("A");
-
 
     loop {
         serial.tx.write_all(&[10u8]);

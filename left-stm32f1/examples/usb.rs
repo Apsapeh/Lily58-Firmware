@@ -18,10 +18,9 @@ use rtt_target::{rprintln, rtt_init_print};
 use stm32f1xx_hal::usb::{Peripheral, UsbBus};
 use stm32f1xx_hal::{pac, prelude::*};
 use usb_device::prelude::*;
-use usbd_serial::{SerialPort, USB_CLASS_CDC};
 
-use usbd_human_interface_device::page::Keyboard;
 use usbd_human_interface_device::device::keyboard::{KeyboardLedsReport, NKROBootKeyboardConfig};
+use usbd_human_interface_device::page::Keyboard;
 use usbd_human_interface_device::prelude::*;
 
 #[entry]
@@ -34,7 +33,6 @@ fn main() -> ! {
     let rcc = dp.RCC.constrain();
 
     rprintln!("Timer started");
-
 
     let clocks = rcc
         .cfgr
@@ -67,22 +65,17 @@ fn main() -> ! {
     };
     let usb_bus = UsbBus::new(usb);
 
-    let mut serial = SerialPort::new(&usb_bus);
-
     let mut keyboard = UsbHidClassBuilder::new()
-    .add_device(
-        NKROBootKeyboardConfig::default(),
-    )
-    .build(&usb_bus);
+        .add_device(NKROBootKeyboardConfig::default())
+        .build(&usb_bus);
 
-let mut usb_dev = UsbDeviceBuilder::new(&usb_bus, UsbVidPid(0x1209, 0x0001))
-    .strings(&[
-        StringDescriptors::default()
+    let mut usb_dev = UsbDeviceBuilder::new(&usb_bus, UsbVidPid(0x1209, 0x0001))
+        .strings(&[StringDescriptors::default()
             .manufacturer("usbd-human-interface-device")
             .product("NKRO Keyboard")
-            .serial_number("TEST")]
-    ).unwrap()       
-    .build();
+            .serial_number("TEST")])
+        .unwrap()
+        .build();
 
     let mut timer = dp.TIM2.counter_hz(&clocks);
     let mut timer2 = dp.TIM3.counter_hz(&clocks);
@@ -104,24 +97,21 @@ let mut usb_dev = UsbDeviceBuilder::new(&usb_bus, UsbVidPid(0x1209, 0x0001))
         } else {
         }
         keyboard.device().write_report(report).ok();
-        
 
-    // tick once per ms/at 1kHz
-    if timer.wait().is_ok() {
-        keyboard.tick().unwrap();
-        //timer.start(1.kHz()).unwrap();
-    } else {
-    }
-
-    if usb_dev.poll(&mut [&mut keyboard]) {
-        match keyboard.device().read_report() {
-
-            Ok(l) => {
-                //update_leds(l);
-            }
-            _ => {}
-
+        // tick once per ms/at 1kHz
+        if timer.wait().is_ok() {
+            keyboard.tick().unwrap();
+            //timer.start(1.kHz()).unwrap();
+        } else {
         }
-    }
+
+        if usb_dev.poll(&mut [&mut keyboard]) {
+            match keyboard.device().read_report() {
+                Ok(l) => {
+                    //update_leds(l);
+                }
+                _ => {}
+            }
+        }
     }
 }
