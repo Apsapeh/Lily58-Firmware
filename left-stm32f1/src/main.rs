@@ -1,7 +1,7 @@
 #![no_main]
 #![no_std]
 
-use panic_halt as _;
+use panic_reset as _;
 
 use cortex_m::asm::delay;
 use cortex_m_rt::entry;
@@ -26,7 +26,7 @@ mod layouts_def;
 #[entry]
 fn main() -> ! {
     // Get access to the device specific peripherals from the peripheral access crate
-    let dp = pac::Peripherals::take().unwrap();
+    let dp = pac::Peripherals::take().unwrap_or_else(|| panic!());
 
     let mut flash = dp.FLASH.constrain();
     let rcc = dp.RCC.constrain();
@@ -75,11 +75,11 @@ fn main() -> ! {
             .manufacturer("MegaHoholTimofeyKirichenko")
             .product("VirhPotujnosti")
             .serial_number("PesPatron")])
-        .unwrap()
+        .unwrap_or_else(|_| panic!())
         .build();
 
     let mut timer = dp.TIM2.counter_hz(&clocks);
-    timer.start(1000.Hz()).unwrap();
+    timer.start(1000.Hz()).unwrap_or_else(|_| panic!());
 
     //
     // Collumns
@@ -111,7 +111,7 @@ fn main() -> ! {
 
     loop {
         // Async reading UART data from slave to buffer
-        match (serial.rx.read()) {
+        match serial.rx.read() {
             Ok(received) => {
                 // Message start
                 if received & 0x80 == 0x80 {
@@ -169,7 +169,7 @@ fn main() -> ! {
         }
 
         if timer.wait().is_ok() {
-            keyboard.tick().unwrap();
+            keyboard.tick().unwrap_or_else(|_| panic!());
         }
 
         if usb_dev.poll(&mut [&mut keyboard]) {

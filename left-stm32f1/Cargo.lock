@@ -255,9 +255,8 @@ dependencies = [
  "cortex-m-semihosting",
  "embedded-hal 1.0.0",
  "nb 1.1.0",
- "panic-halt",
- "panic-rtt-target",
- "rtt-target 0.6.1",
+ "panic-reset",
+ "rtt-target",
  "shared-src",
  "stm32-usbd",
  "stm32f1xx-hal",
@@ -390,19 +389,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "panic-halt"
-version = "1.0.0"
+name = "panic-reset"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a513e167849a384b7f9b746e517604398518590a9142f4846a32e3c2a4de7b11"
-
-[[package]]
-name = "panic-rtt-target"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d6ab67bc881453e4c90f958c657c1303670ea87bc1a16e87fd71a40f656dce9"
+checksum = "6cf1ff2a5b1a478dd94572aa43476b6630e72071cbd016985003ad3903a3a4f5"
 dependencies = [
  "cortex-m",
- "rtt-target 0.3.1",
 ]
 
 [[package]]
@@ -434,15 +426,6 @@ name = "radium"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dc33ff2d4973d518d823d61aa239014831e521c75da58e3df4840d3f47749d09"
-
-[[package]]
-name = "rtt-target"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "065d6058bb1204f51a562a67209e1817cf714759d5cf845aa45c75fa7b0b9d9b"
-dependencies = [
- "ufmt-write",
-]
 
 [[package]]
 name = "rtt-target"

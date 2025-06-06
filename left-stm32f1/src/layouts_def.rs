@@ -77,10 +77,10 @@ const KEYBOARD_LAYOUT: KeyboardLayout = KeyboardLayout {
         ],
         // Layout 4
         [
+            key!(F1), key!(F2), key!(F3), key!(F4), key!(F5), key!(F6),
+            key!(F7), key!(F8), key!(F9), key!(F10), key!(F11), key!(F12),
             key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated),
-            key!(NoEventIndicated), key!(Keypad7), key!(Keypad8), key!(Keypad9), key!(NoEventIndicated), key!(NoEventIndicated),
-            key!(NoEventIndicated), key!(Keypad4), key!(Keypad5), key!(Keypad6), key!(NoEventIndicated), key!(NoEventIndicated),
-            key!(NoEventIndicated), key!(Keypad1), key!(Keypad2), key!(Keypad3), key!(NoEventIndicated), key!(NoEventIndicated),
+            consumer!(ALCalculator), consumer!(ALFileBrowser), consumer!(ALInternetBrowser), consumer!(ALCommandLineProcessorRun), key!(NoEventIndicated), key!(NoEventIndicated),
             key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated),
         ],
     ]
