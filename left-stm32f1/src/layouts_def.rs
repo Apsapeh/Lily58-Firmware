@@ -44,7 +44,7 @@ const KEYBOARD_LAYOUT: KeyboardLayout = KeyboardLayout {
         // Layout 2
         [
             key!(Mute), key!(VolumeDown), key!(VolumeUp), consumer!(PlayPause), consumer!(Rewind), consumer!(FastForward),
-            key!(F1), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated),
+            key!(PrintScreen), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated),
             key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated),
             key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(Copy), key!(Paste), key!(Cut),
             key!(NoEventIndicated), key!(NoEventIndicated), key!(LeftAlt), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated),
@@ -57,13 +57,13 @@ const KEYBOARD_LAYOUT: KeyboardLayout = KeyboardLayout {
             key!(Y), key!(U), key!(I), key!(O), key!(P), key!(DeleteBackspace),
             key!(H), key!(J), key!(K), key!(L), key!(Semicolon), key!(ReturnEnter),
             key!(N), key!(M), key!(Comma), key!(Dot), key!(ForwardSlash), key!(RightShift),
-            key!(Grave), key!(Space), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated),
+            key!(RightAlt), key!(Space), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated),
         ],
         // Layout 2
         [
             key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated),
             key!(Equal), key!(Backslash), key!(LeftBrace), key!(RightBrace), key!(Apostrophe), key!(DeleteForward),
-            key!(NoEventIndicated), key!(LeftArrow), key!(DownArrow), key!(UpArrow), key!(RightArrow), key!(NoEventIndicated),
+            key!(Grave), key!(LeftArrow), key!(DownArrow), key!(UpArrow), key!(RightArrow), key!(NoEventIndicated),
             key!(NoEventIndicated), key!(Home), key!(End), key!(PageUp), key!(PageDown), key!(NoEventIndicated),
             key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated),
         ],
@@ -72,7 +72,7 @@ const KEYBOARD_LAYOUT: KeyboardLayout = KeyboardLayout {
             key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated),
             key!(NoEventIndicated), key!(Keypad7), key!(Keypad8), key!(Keypad9), key!(NoEventIndicated), key!(NoEventIndicated),
             key!(NoEventIndicated), key!(Keypad4), key!(Keypad5), key!(Keypad6), key!(KeypadEnter), key!(NoEventIndicated),
-            key!(Keypad0), key!(Keypad1), key!(Keypad2), key!(Keypad3), key!(NoEventIndicated), key!(NoEventIndicated),
+            key!(Keypad0), key!(Keypad1), key!(Keypad2), key!(Keypad3), key!(KeypadDot), key!(NoEventIndicated),
             key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated),
         ],
         // Layout 4
@@ -86,17 +86,10 @@ const KEYBOARD_LAYOUT: KeyboardLayout = KeyboardLayout {
     ]
 };
 
-/*
-    +   # ъ
-    \   \ э
-    [   / ю
-    ]   @ ж
-    '   - '
-    
-    prscr
-    numlock
-    
-*/
+static mut prev_left_layer: usize = 0;
+static mut prev_right_layer: usize = 0;
+static mut blocked_right_matrix: [bool; 30] = [false; 30];
+static mut blocked_left_matrix: [bool; 30] = [false; 30];
 
 pub fn get_report(
     left_matrix: &[bool; 30],
@@ -108,7 +101,7 @@ pub fn get_report(
     let media_prev_len = media_report.len;
     key_report.clear();
     media_report.clear();
-    
+
     let left_layer = get_left_layer(&left_matrix);
     let right_layer = if left_layer == 1 {
         // For ergonomic meta + alt + <arrows>
@@ -117,25 +110,44 @@ pub fn get_report(
         get_right_layer(&right_matrix)
     };
 
-    for i in 0..30 {
-        if left_matrix[i] {
-            match KEYBOARD_LAYOUT.left[left_layer][i] {
-                MultiKey::KeyboardKey(key) => key_report.push(key),
-                MultiKey::ConsumerKey(key) => media_report.push(key),
+    unsafe {
+        if left_layer != prev_left_layer {
+            prev_left_layer = left_layer;
+            for i in 0..30 {
+                blocked_left_matrix[i] = left_matrix[i];
             }
         }
-    }
-    
 
-    for i in 0..29 {
-        if right_matrix.get(i) {
-            match KEYBOARD_LAYOUT.right[right_layer][i] {
-                MultiKey::KeyboardKey(key) => key_report.push(key),
-                MultiKey::ConsumerKey(key) => media_report.push(key),
+        if right_layer != prev_right_layer {
+            prev_right_layer = right_layer;
+            for i in 0..29 {
+                blocked_right_matrix[i] = right_matrix.get(i);
+            }
+        }
+
+        for i in 0..30 {
+            if !blocked_left_matrix[i] && left_matrix[i] {
+                match KEYBOARD_LAYOUT.left[left_layer][i] {
+                    MultiKey::KeyboardKey(key) => key_report.push(key),
+                    MultiKey::ConsumerKey(key) => media_report.push(key),
+                }
+            } else if !left_matrix[i] {
+                blocked_left_matrix[i] = false;
+            }
+        }
+
+        for i in 0..29 {
+            if !blocked_right_matrix[i] && right_matrix.get(i) {
+                match KEYBOARD_LAYOUT.right[right_layer][i] {
+                    MultiKey::KeyboardKey(key) => key_report.push(key),
+                    MultiKey::ConsumerKey(key) => media_report.push(key),
+                }
+            } else if !right_matrix.get(i) {
+                blocked_right_matrix[i] = false;
             }
         }
     }
-    
+
     // Meta + Alt
     if left_layer == 1 && left_matrix[26] {
         key_report.push(Keyboard::LeftGUI);
@@ -149,7 +161,6 @@ pub fn get_report(
         media_report.fill(Consumer::Unassigned, media_report.len);
     }
 }
-
 
 fn get_left_layer(matrix: &[bool; 30]) -> usize {
     if matrix[25] {
