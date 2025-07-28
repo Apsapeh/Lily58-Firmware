@@ -1,7 +1,6 @@
 use crate::fixed_vec::FixedVec;
 use shared_src::PrimitiveBitset;
 use usbd_human_interface_device::{
-    device::consumer::MultipleConsumerReport,
     page::{Consumer, Keyboard},
 };
 
@@ -30,6 +29,8 @@ macro_rules! consumer {
     };
 }
 
+const LEFT_FN: usize = 25;
+
 #[rustfmt::skip]
 const KEYBOARD_LAYOUT: KeyboardLayout = KeyboardLayout {
     left: [
@@ -43,7 +44,7 @@ const KEYBOARD_LAYOUT: KeyboardLayout = KeyboardLayout {
         ],
         // Layout 2
         [
-            key!(Mute), key!(VolumeDown), key!(VolumeUp), consumer!(PlayPause), consumer!(Rewind), consumer!(FastForward),
+            key!(Mute), key!(VolumeDown), key!(VolumeUp), consumer!(PlayPause), consumer!(ScanPreviousTrack), consumer!(ScanNextTrack),
             key!(PrintScreen), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated),
             key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated),
             key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(Copy), key!(Paste), key!(Cut),
@@ -149,8 +150,9 @@ pub fn get_report(
     }
 
     // Meta + Alt
-    if left_layer == 1 && left_matrix[26] {
+    if left_layer == 1 && (right_matrix.get(13) | right_matrix.get(16)) {
         key_report.push(Keyboard::LeftGUI);
+        key_report.push(Keyboard::LeftAlt); // If first was pressed an ALT and only after a GUI, ALT would be blocked
     }
 
     if rep_vec_prev_len > key_report.len {
@@ -163,7 +165,7 @@ pub fn get_report(
 }
 
 fn get_left_layer(matrix: &[bool; 30]) -> usize {
-    if matrix[25] {
+    if matrix[LEFT_FN] {
         1
     } else {
         0
