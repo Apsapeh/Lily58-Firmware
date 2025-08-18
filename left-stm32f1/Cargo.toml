@@ -30,6 +30,7 @@ stm32f1xx-hal = { git = "https://github.com/stm32-rs/stm32f1xx-hal.git", feature
   "medium",
 ] }
 shared-src = {path = "../shared-src"}
+static_assertions = "1.1.0"
 
 [[bin]]
 name = "left-stm32f1"

@@ -1,10 +1,11 @@
 use crate::fixed_vec::FixedVec;
 use shared_src::PrimitiveBitset;
+use static_assertions::const_assert_eq;
 use usbd_human_interface_device::{
     page::{Consumer, Keyboard},
 };
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 enum MultiKey {
     ConsumerKey(Consumer),
     KeyboardKey(Keyboard),
@@ -30,6 +31,12 @@ macro_rules! consumer {
 }
 
 const LEFT_FN: usize = 25;
+//const LEFT_SHIFT: usize = 18;
+
+const RIGHT_FN_1: usize = 26;
+const RIGHT_FN_2: usize = 27;
+const RIGHT_FN_3: usize = 28;
+
 
 #[rustfmt::skip]
 const KEYBOARD_LAYOUT: KeyboardLayout = KeyboardLayout {
@@ -48,7 +55,7 @@ const KEYBOARD_LAYOUT: KeyboardLayout = KeyboardLayout {
             key!(PrintScreen), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated),
             key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated),
             key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(Copy), key!(Paste), key!(Cut),
-            key!(NoEventIndicated), key!(NoEventIndicated), key!(LeftAlt), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated),
+            key!(NoEventIndicated), key!(NoEventIndicated), key!(LeftAlt), key!(KeypadNumLockAndClear), key!(NoEventIndicated), key!(NoEventIndicated),
         ],
     ],
     right: [
@@ -72,7 +79,7 @@ const KEYBOARD_LAYOUT: KeyboardLayout = KeyboardLayout {
         [
             key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated),
             key!(NoEventIndicated), key!(Keypad7), key!(Keypad8), key!(Keypad9), key!(NoEventIndicated), key!(NoEventIndicated),
-            key!(NoEventIndicated), key!(Keypad4), key!(Keypad5), key!(Keypad6), key!(KeypadEnter), key!(NoEventIndicated),
+            key!(NoEventIndicated), key!(Keypad4), key!(Keypad5), key!(Keypad6), key!(KeypadEnter), key!(KeypadEnter),
             key!(Keypad0), key!(Keypad1), key!(Keypad2), key!(Keypad3), key!(KeypadDot), key!(NoEventIndicated),
             key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated),
         ],
@@ -149,10 +156,15 @@ pub fn get_report(
         }
     }
 
-    // Meta + Alt
+    // Meta + Alt + <arrows>
     if left_layer == 1 && (right_matrix.get(13) | right_matrix.get(16)) {
         key_report.push(Keyboard::LeftGUI);
         key_report.push(Keyboard::LeftAlt); // If first was pressed an ALT and only after a GUI, ALT would be blocked
+    }
+    
+    if left_layer == 1 && [19, 20, 21, 22].iter().any(|&i| right_matrix.get(i)) {
+        key_report.push(Keyboard::LeftGUI);
+        key_report.push(Keyboard::LeftShift);
     }
 
     if rep_vec_prev_len > key_report.len {
@@ -173,11 +185,11 @@ fn get_left_layer(matrix: &[bool; 30]) -> usize {
 }
 
 fn get_right_layer(matrix: &PrimitiveBitset<u32>) -> usize {
-    if matrix.get(26) {
+    if matrix.get(RIGHT_FN_1) {
         1
-    } else if matrix.get(27) {
+    } else if matrix.get(RIGHT_FN_2) {
         2
-    } else if matrix.get(28) {
+    } else if matrix.get(RIGHT_FN_3) {
         3
     } else {
         0

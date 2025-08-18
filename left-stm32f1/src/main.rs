@@ -173,12 +173,7 @@ fn main() -> ! {
         }
 
         if usb_dev.poll(&mut [&mut keyboard]) {
-            /*match keyboard.device().read_report() {
-                Ok(l) => {
-                    //update_leds(l);
-                }
-                _ => {}
-            }*/
+            let _ = keyboard.device::<NKROBootKeyboard<'_, _>, _>().read_report();
         }
     }
 }
