@@ -73,7 +73,7 @@ const KEYBOARD_LAYOUT: KeyboardLayout = KeyboardLayout {
             key!(Equal), key!(Backslash), key!(LeftBrace), key!(RightBrace), key!(Apostrophe), key!(DeleteForward),
             key!(Grave), key!(LeftArrow), key!(DownArrow), key!(UpArrow), key!(RightArrow), key!(NoEventIndicated),
             key!(NoEventIndicated), key!(Home), key!(End), key!(PageUp), key!(PageDown), key!(NoEventIndicated),
-            key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated),
+            key!(RightAlt), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated),
         ],
         // Layout 3
         [
@@ -88,7 +88,7 @@ const KEYBOARD_LAYOUT: KeyboardLayout = KeyboardLayout {
             key!(F1), key!(F2), key!(F3), key!(F4), key!(F5), key!(F6),
             key!(F7), key!(F8), key!(F9), key!(F10), key!(F11), key!(F12),
             key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated),
-            consumer!(ALCalculator), consumer!(ALFileBrowser), consumer!(ALInternetBrowser), consumer!(ALCommandLineProcessorRun), key!(NoEventIndicated), key!(NoEventIndicated),
+            consumer!(ALCalculator), consumer!(ALFileBrowser), consumer!(ALInternetBrowser), consumer!(ALCommandLineProcessorRun), key!(NoEventIndicated), key!(RightShift),
             key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated), key!(NoEventIndicated),
         ],
     ]
